@@ -2,6 +2,7 @@ const User = require("../models/User");
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken');
 const { REFRESH_TOKEN_PRIVATE_KEY, ACCESS_TOKEN_PRIVATE_KEY } = require("../configs/configs");
+const { success, error } = require("../utils/responseWrapper");
 
 
 
@@ -9,30 +10,54 @@ const { REFRESH_TOKEN_PRIVATE_KEY, ACCESS_TOKEN_PRIVATE_KEY } = require("../conf
 
 const signUplController = async (req, res)=>{
     try {
-        const {email, password} = req.body;
+        const { name, email, password} = req.body;
         
-		if (!email && !password) {
-			return res.status(400).send('Email & Password are required');
+		if (!email && !password && !name) {
+            return res.send(error(400, 'Name, Email & Password are required'));
+			// return res.status(400).send(' Name ,Email & Password are required');
 		}
-		
-		if (!email) {
-			return res.status(400).send('Email is required');
+        if (!name) {
+			// return res.status(400).send('name is required');
+			return res.send(error(400, 'Name is requred'));
 		}
+        if (!email) {
+			// return res.status(400).send('Email is required');
+			// return res.status(400).send('Email is required');
+			return res.send(error(400, 'Email is requred'));
+		}
+
 		if (!password) {
-			return res.status(400).send('Password is required');
-		}
+			// return res.status(400).send('Password is required');
+			// return res.status(400).send('Password is required');
+			return res.send(error(400, 'Password is required'));
+        }
+		
         const existingUser = await User.findOne({ email });
 		if (existingUser) {
-			return res.status(409).send('User is already registered');
+            return res.send(error(409, 'User is already registered'));
+            // return res.status(409).send('User is already registered');
 		}
+
+
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = await User.create({
+
+        const nweUser = await User.create({
+            name,
 			email,
 			password: hashedPassword,
 		});
-		return res.status(201).json({
-			user,
+		const accessToken = generateAccessToken({
+			_id: nweUser._id,
 		});
+		const refreshToken = generateRefreshToken({
+			_id: nweUser._id,
+		});
+		res.cookie('jwt', refreshToken, {
+			httpOnly: true,
+			secure: true,
+		});
+        return res.json(success(201, {accessToken, refreshToken, user:nweUser}));
+
     
     } catch (err) {
         console.log(err);
@@ -43,21 +68,25 @@ const loginController = async (req, res)=>{
     try {
         const {email, password } = req.body;
 
-        if(!email || !password){
-            return res.status(400).send('email and password are required')
+        if(!email && !password){
+            return res.send(error(400, 'Email & Password are required'));
+            // return res.status(400).send('email and password are required')
         }
         const user = await User.findOne({email})
 
         if(!user){
-            return res.status(404).send("User is not found")
+            return res.send(error(404, 'User is not registered'));
+            // return res.status(404).send("User is not found")
         }
 
         const CorrectPassword = await bcrypt.compare(password, user.password)
 
 
         if(!CorrectPassword){
-            return res.status(403).send('incorrect password')
-        }
+            return res.send(error(403, 'Incorrect password'));
+		}
+            // return res.status(403).send('incorrect password')
+        
 
         const accessToken = generateAccessToken({
             _id: user._id
@@ -67,36 +96,39 @@ const loginController = async (req, res)=>{
             _id: user._id
         })
 
-        return res.json({
-            accessToken:accessToken,
-            refreshToken:refreshToken
-        })
+     res.cookie("jwt", refreshToken, {
+        httpOnly: true,
+        secure: true
+     })
 
+     return res.json(success(200, {accessToken, refreshToken,  user}));
+	
     } catch (err) {
         console.log(err);
     }
 }
 const refreshAccessTokenController = async (req, res) => {
 	const { refreshToken } = req.body;
+
 	if (!refreshToken) {
-		return res.status(401).send('Refresh token is required');
+		return res.send(error(401, 'Refresh token is required'));
 	}
+
 	try {
-		const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_PRIVATE_KEY);
-		const _id = decoded._id;
+		const decode = jwt.verify(refreshToken, REFRESH_TOKEN_PRIVATE_KEY);
+
+		const _id = decode._id;
+
 		const newAccessToken = generateAccessToken({ _id });
-		return res.status(201).json({
-			newAccessToken,
-		});
+
+		return res.send(success(201, { newAccessToken }));
 	} catch (err) {
-		console.log(err);
-		return res.status(401).send('Invalid refresh token');
+		return res.send(error(500, err.message));
 	}
 };
-//Internal functions which we will not be exporting
+
 const generateAccessToken = (data) => {
 	try {
-		//This jwt.sign function asks us two arguments, one the data we want to encrypt and other the secret key which only you will know/any random string.
 		const accessToken = jwt.sign(data, ACCESS_TOKEN_PRIVATE_KEY, {
 			expiresIn: '15m',
 		});
