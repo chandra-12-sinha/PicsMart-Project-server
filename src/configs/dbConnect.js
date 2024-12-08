@@ -1,11 +1,9 @@
-
-const configs = require('./configs')
-const { ServerApiVersion } = require("mongodb");
-const { default: mongoose } = require("mongoose");
+const mongoose = require('mongoose');
+const { ServerApiVersion } = require('mongodb');
+const { MONGO_URI } = require('./configs');
 
 
 module.exports = async () => {
-	const MONGO_URI = configs.MONGO_URI;
 	try {
 		const connect = await mongoose.connect(MONGO_URI, {
 			serverApi: {
