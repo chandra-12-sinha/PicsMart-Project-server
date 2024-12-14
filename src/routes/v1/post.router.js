@@ -1,9 +1,21 @@
-// const { getAllPostsController } = require('../../controllers/post.controller');
-const { getAllPostsController } = require('../../contollers/post.Controller');
+// const {
+// 	createPostController,
+// 	likeAndUnlikeController,
+// 	getAllPostOfFollowings,
+// 	deletePostController,
+// 	getMyPostsController,
+// } = require('../../controllers/post.controller');
+// const requireUser = require('../../middleware/requireUser');
+
+const { getAllPostOfFollowings, createPostController, likeAndUnlikeController, deletePostController, getMyPostsController } = require('../../contollers/post.Controller');
 const requireUser = require('../../middlewere/requireUser');
-// const requireUser = require('../../middlewares/requireUser');
+
 const router = require('express').Router();
 
-getAllPostsController
-router.get('/all', requireUser, getAllPostsController);
+router.get('/all', requireUser, getAllPostOfFollowings);
+router.post('/', requireUser, createPostController);
+router.post('/like', requireUser, likeAndUnlikeController);
+router.delete('/', requireUser, deletePostController);
+router.get('/', requireUser, getMyPostsController);
+
 module.exports = router;

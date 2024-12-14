@@ -1,35 +1,45 @@
+const cookieParser = require('cookie-parser');
 const express = require('express')
-const mainRouter = require('./src/routes/index')
-const { PORT } = require('./src/configs/configs')
-const dbConnect = require('./src/configs/dbConnect')
-const morgan = require('morgan')
-const cookieParser = require('cookie-parser')
+const morgan = require('morgan');
+const mainRouter = require('./src/routes/index');
 const cors = require('cors')
-const { success } = require('./src/utils/responseWrapper')
+const dbConnect = require('./src/configs/dbConnect');
+const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, PORT } = require('./src/configs/configs');
+const cloudinary = require('cloudinary').v2
 
+const app = express();
 
-const app = express()
+// Configure cloudinary
+cloudinary.config({
+	cloud_name: CLOUDINARY_CLOUD_NAME,
+	api_key: CLOUDINARY_API_KEY,
+	api_secret: CLOUDINARY_API_SECRET,
+});
 
-app.use(express.json())
-
-app.use(express.json())
-app.use(morgan('common'))
-app.use(cookieParser())
+//middlewares
+app.use(express.json({limit: "60mb"}));
+app.use(morgan('common'));
+app.use(cookieParser());
 app.use(
-    cors({
-        credentials: true,
+	cors({
+		credentials: true,
 		origin: 'http://localhost:3000',
-    })
-)
+	})
+);
 
-app.use("/", mainRouter)
+//default route
+app.get('/', (req, res) => {
+	res.json({
+		status: 'Server is running at full capacity!',
+	});
+});
 
-app.get('/', (req, res)=>{
-    res.json(success(200, 'working at full capacity'))
-    })
+//main routes
+app.use('/', mainRouter);
 
-app.listen(PORT, ()=>{
-    console.log(`listening on PORT: ${PORT}`);
-})
+//listening on port
+app.listen(PORT, () => {
+	console.log(`Listening on port: ${PORT}`);
+});
 
 dbConnect()

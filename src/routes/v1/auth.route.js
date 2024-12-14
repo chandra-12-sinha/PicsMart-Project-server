@@ -1,11 +1,17 @@
-const { loginController, signUplController, refreshAccessTokenController } = require('../../contollers/auth.Controller')
-const authRouter = require('./')
-const router = require('express').Router()
 
 
+const {
+  signupController,
+  loginController,
+  refreshAccessTokenController,
+  logOutController,
+} = require("../../contollers/auth.Controller");
 
-router.post('/login', loginController )
-router.post("/signup",signUplController)
-router.get('/refreshtoken', refreshAccessTokenController)
+const router = require("express").Router();
 
-module.exports = router
+router.post("/signup", signupController);
+router.post("/login", loginController);
+router.post("/refreshtoken", refreshAccessTokenController);
+router.delete("/", logOutController);
+
+  module.exports = router;
