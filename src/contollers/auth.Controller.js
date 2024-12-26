@@ -11,7 +11,21 @@ const signupController = async (req, res) => {
 
 		if (!email || !password || !name) {
 			// return res.status(400).send('email and password are required');
-			return res.send(error(400, 'email and password are required'));
+			return res.send(error(400, ' name, email and password are required'));
+		}
+		if (!name) {
+			// return res.status(400).send('name is required');
+			return res.send(error(400, 'Name is required'));
+		}
+
+		if (!email) {
+			// return res.status(400).send('Email is required');
+			return res.send(error(400, 'Email is required'));
+		}
+
+		if (!password) {
+			// return res.status(400).send('Password is required');
+			return res.send(error(400, 'Password is required'));
 		}
 
 		const existingUser = await User.findOne({ email });
@@ -24,18 +38,18 @@ const signupController = async (req, res) => {
 		//encrypt the password
 		const hashedPassword = await bcrypt.hash(password, 10);
 
-		const newUser = await User.create({
+		const user = await User.create({
             name,
 			email,
 			password: hashedPassword,
 		});
 
 		const accessToken = await generateAccessToken({
-			_id: newUser._id,
+			_id: user._id,
 		});
 
 		const refreshToken = await generateRefreshToken({
-			_id: newUser._id,
+			_id: user._id,
 		});
 
 		res.cookie('jwt', refreshToken, {
@@ -45,10 +59,10 @@ const signupController = async (req, res) => {
 
 		// return res.status(201).json({
 		// 	accessToken,
-		// 	user: newUser,
+		// 	user: user,
 		// });
 		return res.send(
-			success(201, { accessToken, refreshToken, user: newUser })
+			success(201, { accessToken, refreshToken, user })
 		);
 	} catch (err) {
 		// return res.status(500).send(err.message);
@@ -63,6 +77,15 @@ const loginController = async (req, res) => {
 		if (!email || !password) {
 			// return res.status(400).send('email and password are required');
 			return res.send(error(400, 'email and password are required'));
+		}
+		if (!email) {
+			// return res.status(400).send('Email is required');
+			return res.send(error(400, 'Email is required'));
+		}
+
+		if (!password) {
+			// return res.status(400).send('Password is required');
+			return res.send(error(400, 'Password is required'));
 		}
 
 		const user = await User.findOne({ email }).select('+password');
@@ -97,7 +120,7 @@ const loginController = async (req, res) => {
 		// return res.json({
 		// 	accessToken: accessToken,
 		// });
-		return res.send(success(200, { accessToken, refreshToken, user }));
+		return res.send(success(200, { accessToken: accessToken, user}));
 	} catch (err) {
 		// return res.status(500).send(err.message);
 		return res.send(error(500, err.message));
@@ -105,11 +128,13 @@ const loginController = async (req, res) => {
 };
 
 const refreshAccessTokenController = async (req, res) => {
-	const { refreshToken } = req.body;
+	// const { refreshToken } = req.body;
+	const  cookies = req.cookies;
 
-	if (!refreshToken) {
-		return res.send(error(401, 'Refresh token is required'));
+	if (!cookies.jwt) {
+		return res.send(error(401, 'Refresh token in cookies is required'));
 	}
+	const refreshToken = cookies.jwt
 
 	try {
 		const decode = jwt.verify(refreshToken, REFRESH_TOKEN_PRIVATE_KEY);
@@ -118,22 +143,22 @@ const refreshAccessTokenController = async (req, res) => {
 
 		const newAccessToken = await generateAccessToken({ _id });
 
-		return res.send(success(201, { newAccessToken }));
+		return res.send(success(201, {accessToken: newAccessToken }));
 	} catch (err) {
-		return res.send(error(500, err.message));
+		return res.send(error(401, "invalid refresh token" ));
 	}
 };
 
 //internal functions
 const generateAccessToken = async (data) => {
 	try {
-		const token = jwt.sign(data, ACCESS_TOKEN_PRIVATE_KEY, {
+		const accessToken= jwt.sign(data, ACCESS_TOKEN_PRIVATE_KEY, {
 			expiresIn: '1d',
 		});
 
-		return token;
+		return accessToken;
 	} catch (err) {
-		// return res.status(500).send(err.message);
+		return res.status(500).send(err.message);
 		console.log(err.message);
 	}
 };
@@ -146,7 +171,8 @@ const generateRefreshToken = async (data) => {
 
 		return refreshToken;
 	} catch (err) {
-		console.log(err.message);
+		// console.log(err.message);
+		return res.send(error(500, err.message));
 	}
 };
 

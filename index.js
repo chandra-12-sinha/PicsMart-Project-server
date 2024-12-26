@@ -30,7 +30,7 @@ app.use(
 //default route
 app.get('/', (req, res) => {
 	res.json({
-		status: 'Server is running at full capacity!',
+		status: 'Working at full capacity!',
 	});
 });
 
